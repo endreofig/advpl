@@ -13,39 +13,49 @@
 @see (links_or_references)
 /*/
 
-User Function DEVEND01()                        
-	Local oButton1
-	Local oButton2
-	Local oFont1 := TFont():New("Calibri",,023,,.T.,,,,,.F.,.F.)
-	Local oFont2 := TFont():New("Calibri",,020,,.F.,,,,,.F.,.F.)
-	Local oGet1
-	Local cGet1 := Space(20)
-	Local oSay1
-	Local oSay2
-	Local bError 
-	Static oDlg
-	
+User Function DEVEND01() 
+    Local _oFont1       := TFont():New("Calibri",,018,,.T.,,,,,.F.,.F.)
+    Local _oFont2       := TFont():New("Calibri",,024,,.F.,,,,,.F.,.F.)
+    Local oFont         := TFont():New('Courier new',,-14,.T.)
+    Local _oGet1
+    Local cGet1         := Space(50)
+    Local dData         := DATE()
+    Local ctime         := ""
+    Local _oGroup
+    Local oTimer1  
+    Local _oSay1
+    Local oTMsgBar
+    Local oTMsgItem1
+    Local oTMsgItem2
+    Local cCodigo       := RetCodUsr()
+    Local cNomeUsr      := UsrRetName(cCodigo)
+    Local aCargoUsr     := UsrRetGrp(cCodigo)
+    Local aButtons      := {}
+    Local bError 
+    Static oDlg
 
-	// Recupera e/ou define um bloco de código para ser avaliado quando ocorrer um erro em tempo de execução
+  // Recupera e/ou define um bloco de código para ser avaliado quando ocorrer um erro em tempo de execução
 	bError := ErrorBlock( {|e| cError := e:Description } ) //, Break(e) } )
 
 	// Inicia sequencia.
 	BEGIN SEQUENCE
 
-		DEFINE MSDIALOG oDlg TITLE "" FROM 000, 000  TO 220, 500 COLORS 0, 16777215 PIXEL
+    DEFINE MSDIALOG oDlg TITLE "SEM TITULO" FROM 000, 000  TO 200, 500 COLORS 0, 16763742 PIXEL STYLE nOR( WS_VISIBLE, WS_POPUP )
+    
+      @ 000, 000 GROUP _oGroup TO 100, 255 OF oDlg COLOR 0, 16763742 PIXEL
+      @ 061, 020 MSGET _oGet1 VAR cGet1 SIZE 207, 013 OF oDlg COLORS 0, 16777215 FONT _oFont1 PIXEL
+      @ 041, 020 SAY _oSay1 PROMPT "Digite o nome da Função" SIZE 137, 014 OF oDlg FONT _oFont2 COLORS 0, 16763742 PIXEL
+      EnchoiceBar(oDlg,{||EXECFUN(cGet1)},{||oDlg:End()},,@aButtons)
 
-			@ 011, 061 SAY oSay1 PROMPT "Testar Função Customizada" SIZE 115, 013 OF oDlg FONT oFont1 COLORS 0, 16777215 PIXEL
-			@ 046, 016 SAY oSay2 PROMPT "Nome da Função" 			SIZE 074, 012 OF oDlg FONT oFont1 COLORS 0, 16777215 PIXEL
+      // Cria barra de status
+      oTMsgBar := TMsgBar():New(oDlg, '',.F.,.F.,.F.,.F., RGB(116,116,116),,oFont,.F.)
+      // Cria itens
+      oTMsgItem1 := TMsgItem():New( oTMsgBar, dData                        , 100,,,,.T., {||} )
+      oTMsgItem2 := TMsgItem():New( oTMsgBar, cNomeUsr                     , 350,,,,.T., {||} )
 
-			@ 047, 095 MSGET oGet1 VAR cGet1 SIZE 099, 010 OF oDlg COLORS 0, 16777215 PIXEL
+    ACTIVATE MSDIALOG oDlg CENTERED 
 
-			@ 070, 144 BUTTON oButton1 PROMPT "Executar" 	SIZE 046, 018 OF oDlg ACTION EXECFUN(cGet1) PIXEL
-			@ 070, 197 BUTTON oButton2 PROMPT "Sair" 		SIZE 046, 018 OF oDlg ACTION oDlg::End() 	PIXEL
-			SET MESSAGE OF oDlg COLORS 0, 14215660
-
-		ACTIVATE MSDIALOG oDlg CENTERED
-
-	RECOVER
+  RECOVER
 		
 		// Recupera e apresenta o erro.
 		ErrorBlock( bError )
@@ -67,11 +77,12 @@ Return
 /*/
 
 Static Function EXECFUN(cGet1)
-	LOCAL lSF2460I := ExistBlock(cGet1)
+	Local lSF2460I := ExistBlock(cGet1)
 
-	IF lSF2460I
-		ExecBlock(cGet1,.F.,.F.)
-	ELSE
-		MsgInfo("A Função Executada Não esta Compilada!", "Atenção !")
-	ENDIF                    
+    If lSF2460I
+      ExecBlock(cGet1,.F.,.F.)
+    Else
+      MsgInfo("A Função Executada Não esta Compilada!", "<b>Atenção !</b>")
+    Endif  
+
 Return
