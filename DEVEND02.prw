@@ -1,114 +1,62 @@
 #INCLUDE "TOTVS.CH"
 
-#IFNDEF CRLF
-	#DEFINE CRLF ( chr(13)+chr(10) )
-#ENDIF	
-
-/*/{Protheus.doc}
-@description Funcao para consulta de Cep via webservice 
-@type User Function DEVEND02
-@author Endreo Figueiredo
-@since 23/05/2019
-@version 12.1.17
-@param param, param_type, param_descr
-@return Use um pouco de sua criatividade
-@see Executar Função passando cep como parametro DEVEND02("78098-550")
+/*/{Protheus.doc} DEVEND02
+	@description Funcao para consulta de Cep via webservice 
+	@type User Function DEVEND02
+	@author Endreo Figueiredo
+	@since 26/06/2019
+	@param param, param_type, param_descr
+	@return Use um pouco de sua criatividade
+	@see Executar Função passando cep como parametro DEVEND02("78098-550")
 /*/
 
 User Function DEVEND02(p_cCep)
-	Local oJson 		:= tJsonParser():New()
-	Local cCep 			:= p_cCep
-	Local cURL			:= "https://viacep.com.br/ws/"
-	Local lenStrJson 	:= 0
-	Local strJson		:= ''
-	Local jsonfields 	:= {}
-  	Local nRetParser 	:= 0
-	Local lRet			:= .F.
+	
+	Private oJson 		  := JsonObject():New()
+	Private lRet		  := ENDVLCEP(p_cCep)
+	oJson['URLCONSULTA']  	  := "https://viacep.com.br/ws/"+lRet[2]+"/json/"
 
-	Local cRua 		:= ""
-	Local cComple 	:= ""
-	Local cBairro 	:= ""
-	Local cCidade 	:= ""
-	Local cUf 		:= ""
-	Local cUnidad 	:= ""
-	Local cCep2		:= ""
-	Local cIbge		:= ""
-
-	If ( ENDVLCEP(cCep) )
-
-		cCep := StrTran(AllTrim(cCep),"-")+"/json/"
-
-		MsgRun( "Aguarde..." , "Consultando CEP" , { || strJson := HTTPGET( cURL+cCep ) } )
-
-		lenStrJson := Len(strJson)
-		jsonfields := {}
-		lRet := oJson:Json_Parser(strJson, lenStrJson, @jsonfields, @nRetParser)
-
-			If ( !FWJsonDeserialize(strJson, @oJson) )
-
-				MsgStop("Descupe houve um erro ao recuperar dados")
-
-			ElseIf AttIsMemberOf(oJson,"ERRO")
-
-				MsgStop("CEP inexistente na base de dados.")	
-				
+	IF lRet[1]
+	 	oJson:fromJSON(HTTPGET(oJson['URLCONSULTA'])) 
+			If !Empty(oJson:GetJsonText("erro"))
+				MsgAlert("CEP Inexistente")
 			Else
-				//Somente exemplo de uso de retorno json 
-				cRua 	:= DecodeUTF8(oJson:logradouro)
-				cComple := DecodeUTF8(oJson:complemento)
-				cBairro := DecodeUTF8(oJson:bairro)
-				cCidade := DecodeUTF8(oJson:localidade)
-				cUf 	:= DecodeUTF8(oJson:uf)
-				cUnidad := DecodeUTF8(oJson:unidade)
-				cCep2 	:= DecodeUTF8(oJson:cep)
-				cIbge	:= DecodeUTF8(oJson:ibge)
-
-				//Só para teste 
-				MsgAlert("Rua: " + cRua + CRLF + " - Complemento: " + cComple + CRLF+ " - Bairro: " + cBairro + CRLF+ " - Cidade: " + cCidade + CRLF+ " - UF: " + cUf + CRLF+ " ","<b>Dados !</b>")
-
+				MsgAlert(DecodeUTF8("Rua : "+oJson['logradouro']+" em "+oJson['localidade']))
 			EndIf
-	Else
-
-		MsgAlert("Verifique o CEP")
-
+	Else 
+		MsgInfo("CPF Incorreto")
 	EndIf
+		
+	FreeObj(oJson)	
 
 Return
 
 /*/{Protheus.doc} ENDVLCEP
-	Valida e remove caracteres especiais do CEP
-	@type User Function DEVEND02
-	@author Endreo Figueiredo
-	@since 23/05/2019
-	@version 12.1.17
+	(Verifica se CEP tem quantidade caracteres correta e remove ifem)
+	@type  Static Function
+	@author Endreo Figueiredo	
+	@since 26/06/2019
+	@version 2.0
 	@param param, param_type, param_descr
 	@return return, return_type, return_description
-	@example
-	Uso de função de ENDVLCEP("78098-550")
-	@see (links_or_references)
-	/*/
+/*/
+
 Static Function ENDVLCEP(p_cCep)
-	Local cCep 	:= p_cCep
-	Local lRet 	:= .F.
-	Local nIfen	:= At("-",cCep,)
-	Local nCar	:= Len(StrTran(AllTrim(cCep),"-")) // Dever ser 7 de qualquer forma
+	Local lRet 	:= {.F., ""}
+	oJson['CEPINFORMADO'] 	  := Alltrim(p_cCep)
+	oJson['CONTEMIFEM'] 	  := At("-",p_cCep,)
+	oJson['NUMEROCARACTERES'] := Len(StrTran(AllTrim(p_cCep),"-"))
 
-	If ( Empty(Alltrim(cCep)) )
+	If  Empty(oJson['CEPINFORMADO']) .And. ( oJson['NUMEROCARACTERES'] < 8 )
+		
+		MsgAlert("Verifique o CEP informado","<b>Informativo !</b>")
 
-		MsgAlert("CEP em branco verifique","<b>Informativo !</b>")
-
-	Else
-
-		IF ( Len(Alltrim(cCep)) < 8  )
-
-			MsgAlert("Verifique o CEP informado","<b>Informativo !</b>")
-
-		ElseIf ( nIfen == 6 .AND. nCar == 8 ) .OR. ( nIfen == 0 .AND. nCar == 8 )
-			
-			lRet := .T.
-
-		Endif
-
-	EndIf
+	ElseIf ( oJson['CONTEMIFEM'] == 6 .AND. oJson['NUMEROCARACTERES'] == 8 ) .OR. ( oJson['CONTEMIFEM'] == 0 .AND. oJson['NUMEROCARACTERES'] == 8 )
+		
+		lRet[1] := .T.
+		lRet[2] := StrTran(AllTrim(p_cCep),"-")
+	
+	Endif
 
 Return ( lRet )
+
